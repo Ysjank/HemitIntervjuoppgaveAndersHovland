@@ -1,0 +1,53 @@
+﻿@page "/patients"
+@using Microsoft.EntityFrameworkCore
+@using Microsoft.AspNetCore.Components.QuickGrid
+@using HemitIntervjuoppgaveAndersHovland.Data
+@implements IAsyncDisposable
+@inject IDbContextFactory<ApplicationDbContext> DbFactory
+
+<PageTitle>Index</PageTitle>
+
+<h1>Index</h1>
+
+<p>
+    <a href="patients/create">Create New</a>
+</p>
+<div>
+    <form action="/patients" data-enhance data-permanent>
+        <input type="search" name="FilterString" />
+        <input type="submit" value="Search" />
+        <div style="display: @(searchNoResult ? "block" : "none")">No patients with name @(FilterString) exists.</div>
+    </form>
+</div>
+
+<QuickGrid Class="table" Items="searchedPatients">
+    <PropertyColumn Property="patient => patient.Id" />
+    <PropertyColumn Property="patient => patient.Name" />
+    @* <PropertyColumn Property="patient => patient.DateOfBirth" /> *@
+    <PropertyColumn Property="patient => patient.Age" />
+    <PropertyColumn Property="patient => patient.Conditions" />
+
+    <TemplateColumn Context="patient">
+        <a href="@($"patients/edit?id={patient.Id}")">Edit</a> |
+        <a href="@($"patients/details?id={patient.Id}")">Details</a> |
+        <a href="@($"patients/delete?id={patient.Id}")">Delete</a>
+    </TemplateColumn>
+</QuickGrid>
+
+@code {
+    private ApplicationDbContext context = default!;
+
+    [SupplyParameterFromQuery]
+    private string FilterString { get; set; } = string.Empty;
+
+    private IQueryable<Patient> searchedPatients => context.Patients.Where(p => $"{p.Id}" == FilterString || p.Name.ToLower().Contains(FilterString.ToLower() ?? string.Empty));
+
+    private bool searchNoResult => !searchedPatients.Any();
+
+    protected override void OnInitialized()
+    {
+        context = DbFactory.CreateDbContext();
+    }
+
+    public async ValueTask DisposeAsync() => await context.DisposeAsync();
+}
